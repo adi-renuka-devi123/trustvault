@@ -1,27 +1,27 @@
-require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const helmet = require('helmet');
-
 const app = express();
 
-// Security headers
-app.use(helmet());
+// middleware
 app.use(cors());
 app.use(express.json());
 
-// T3 FIX: No static serving of private_storage folder
+// routes - adi added
+const docRoutes = require('./routes/documents');
+const authRoutes = require('./routes/auth');
 
-// Health check
+app.use('/api/documents', docRoutes);
+app.use('/api/auth', authRoutes);
+
+// test route
 app.get('/', (req, res) => {
-  res.json({ message: 'TrustVault Secure API Running', secure: true });
+  res.send('TrustVault backend running - Adi');
 });
 
-// Routes
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/documents', require('./routes/documents'));
+// no static folder here, private docs should not be public
+// app.use(express.static('private_storage')) - removed this, its not secure
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`TrustVault running on port ${PORT}`);
+  console.log('server running on', PORT);
 });
