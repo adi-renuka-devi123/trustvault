@@ -1,35 +1,23 @@
-# THREATS.md - Security Threat Model
+# TrustVault - What I Fixed
 
-## T1 - IDOR - Insecure Direct Object Reference
-Threat: User changes /documents/123/download to /124 and downloads other's file.
-Mitigation: Every download/preview API checks HasAccess(userId, docId) from DB. No direct file path.
-Test: Login as Viewer, try to guess Admin doc ID, should get 403 Forbidden.
-Status: Fixed in code.
+I checked the given codebase and found some security issues.
 
-## T2 - Revoked Token Still Works
-Threat: After owner revokes viewer, viewer still uses old JWT to download.
-Mitigation: JWT contains only userId, no permissions. Permission checked live from DB on every request. JWT expiry 5 minutes.
-Test: Grant -> Viewer downloads success -> Revoke -> Viewer downloads again -> 403.
-Status: Fixed.
+### 1. Direct URL problem (T1 & T3)
+Before, private_storage folder was public with express.static. Anyone could guess url like /private_storage/doc.pdf and download.
+What I did: I removed that static line in index.js. Now all docs need token via /api/documents/:id/preview.
 
-## T3 - Direct URL Bypass
-Threat: User tries /private_storage/file.pdf directly bypassing API.
-Mitigation: Files stored outside webroot, not served by static server. Only API stream can access.
-Status: Fixed.
+### 2. No watermark (T2)
+If someone takes screenshot, we dont know who leaked.
+What I did: Added watermark with user email + date in preview API. So if leaked we can trace.
 
-## T4 - Audit Log Tampering
-Threat: Admin edits audit logs to hide leak.
-Mitigation: Audit table is append-only. App DB user has no UPDATE/DELETE privilege. Hash chain links each log.
-Status: Fixed.
+### 3. No logging (T4)
+No record who saw which doc.
+What I did: Added console.log with user email, doc id and time. In real project this will go to DB.
 
-## T5 - Admin Cannot Be Tracked
-Threat: Admin downloads without log.
-Mitigation: All actions including Admin's logged with userId, docId, action, timestamp, IP.
-Status: Implemented.
+### 4. Share link never expires (T5)
+Old link was working forever, anyone can forward.
+What I did: Created one-time token link which expires in 1 hour and after first view it becomes invalid. Used crypto.randomBytes for token.
 
-## T6 - Brute Force Login
-Threat: Attacker tries many passwords.
-Mitigation: Rate limiting on login, account lock after 5 fails.
-Status: To be implemented.
+I tested with postman - without token it gives 401 error.
 
-## T7-T12 - Will be added daily - Injection, XSS, CSRF, etc.
+- Adi
