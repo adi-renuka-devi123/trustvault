@@ -1,0 +1,13 @@
+import { useState, useEffect } from 'react'
+import axios from 'axios'
+const API = import.meta.env.VITE_API_URL || 'https://trustvault-0x9y.onrender.com'
+function App(){
+  const [email,setEmail]=useState('');const [password,setPassword]=useState('');const [files,setFiles]=useState([]);const [uploadFile,setUploadFile]=useState(null);const [msg,setMsg]=useState('')
+  useEffect(()=>{const t=localStorage.getItem('token');if(t) fetchFiles(t)},[])
+  const fetchFiles=async(token)=>{try{const r=await axios.get(`${API}/api/files`,{headers:{Authorization:`Bearer ${token}`}});setFiles(r.data)}catch{}}
+  const login=async(e)=>{e.preventDefault();try{const r=await axios.post(`${API}/api/auth/login`,{email,password});localStorage.setItem('token',r.data.token);fetchFiles(r.data.token);setMsg('Login success!')}catch(err){setMsg('Login failed')}}
+  const register=async(e)=>{e.preventDefault();try{const r=await axios.post(`${API}/api/auth/register`,{email,password});localStorage.setItem('token',r.data.token);fetchFiles(r.data.token);setMsg('Registered!')}catch(err){setMsg('Register failed')}}
+  const upload=async()=>{if(!uploadFile)return;const token=localStorage.getItem('token');const fd=new FormData();fd.append('file',uploadFile);try{await axios.post(`${API}/api/files/upload`,fd,{headers:{Authorization:`Bearer ${token}`}});setMsg('Uploaded!');fetchFiles(token)}catch{setMsg('Upload failed')}}
+  const logout=()=>{localStorage.removeItem('token');setFiles([]);setMsg('Logged out')}
+  return(<div className="container"><h1>🔐 TrustVault</h1><p style={{color:'#888'}}>Secure Vault</p>{msg&&<div className="card">{msg}</div>}{!localStorage.getItem('token')?(<div className="card"><h2>Login / Register</h2><input placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)}/><input placeholder="Password" type="password" value={password} onChange={e=>setPassword(e.target.value)}/><div style={{display:'flex',gap:'10px',marginTop:'10px'}}><button className="btn" onClick={login}>Login</button><button className="btn" style={{background:'#222'}} onClick={register}>Register</button></div></div>):(<><div style={{display:'flex',justifyContent:'space-between'}}><h2>Your Vault</h2><button className="btn" style={{background:'#222'}} onClick={logout}>Logout</button></div><div className="card"><input type="file" onChange={e=>setUploadFile(e.target.files[0])}/><button className="btn" style={{marginTop:'10px'}} onClick={upload}>Upload</button></div>{files.map((f,i)=>(<div key={i} className="card"><b>{f.filename||f.originalName}</b><p style={{fontSize:'12px',color:'#888'}}>{f.hash?.slice(0,20)}</p></div>))}</>)} </div>)}
+export default App
