@@ -1,16 +1,13 @@
 import express from 'express';
 const router = express.Router();
 
-router.post('/register', async (req, res) => {
-  try {
-    res.json({ message: "Register success", user: req.body });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+router.post('/register', (req, res) => {
+  console.log('Register hit:', req.body);
+  res.json({ message: "Register OK", email: req.body.email });
 });
 
-router.post('/login', async (req, res) => {
-  res.json({ message: "Login success" });
+router.post('/login', (req, res) => {
+  res.json({ message: "Login OK", email: req.body.email });
 });
 
 export default router;
