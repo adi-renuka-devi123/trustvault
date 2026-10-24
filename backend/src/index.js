@@ -1,70 +1,54 @@
 const express = require('express');
-const cors = require('cors');
 const mongoose = require('mongoose');
+const cors = require('cors');
+const multer = require('multer');
+const fs = require('fs');
 require('dotenv').config();
 
 const app = express();
 
-// --- CORS FIX ---
-const allowedOrigins = [
-  "https://trustvault-siik.vercel.app",
-  "https://trustvault-2-jx6q.onrender.com",
-  "http://localhost:5173",
-  "http://localhost:3000",
-  "http://localhost:5174"
-];
-
-if (process.env.FRONTEND_URL) {
-  allowedOrigins.push(process.env.FRONTEND_URL);
-}
-
 app.use(cors({
-  origin: function (origin, callback) {
-    // allow requests with no origin (like Postman, mobile apps)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith(".vercel.app")) {
-      callback(null, true);
-    } else {
-      callback(null, true); // temporarily allow all for debugging
-    }
-  },
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"]
+  origin: "*",
+  credentials: true
 }));
-
-// Handle preflight
-app.options('*', cors());
-
 app.use(express.json());
 
-// test route
-app.get('/', (req, res) => {
-  res.send('TrustVault backend running - Adi!');
-});
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log("MongoDB Connected"))
+  .catch(e => console.log(e));
 
-// DB connect
-mongoose.connect(process.env.MONGO_URI || process.env.MONGODB_URI)
-  .then(() => console.log('MongoDB connected'))
-  .catch(err => console.log('MongoDB error:', err.message));
-
-// Routes
+// Auth routes
 try {
-  let authRoutes = require('./routes/auth');
-  if (authRoutes.default) authRoutes = authRoutes.default;
+  const authRoutes = require('./routes/auth');
   app.use('/api/auth', authRoutes);
-  console.log('Auth routes loaded');
-} catch (e) {
-  console.log('Auth route error:', e.message);
-  app.post('/api/auth/register', (req, res) => {
-    res.status(200).json({ message: 'Register route working - add DB logic' });
-  });
-  app.post('/api/auth/login', (req, res) => {
-    res.status(200).json({ message: 'Login route working - add DB logic' });
-  });
-}
+} catch(e){ console.log("auth route missing") }
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log('server running on', PORT);
+const auth = require('./middleware/auth');
+
+// Render kosam /tmp use cheyyali
+const uploadDir = '/tmp/uploads';
+if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, {recursive:true});
+
+const storage = multer.diskStorage({
+  destination: (req,file,cb)=> cb(null, uploadDir),
+  filename: (req,file,cb)=> cb(null, Date.now()+"-"+file.originalname)
 });
+const upload = multer({storage});
+
+// RENDU ROUTES - Edi hit aina work avvali
+app.post('/api/upload', auth, upload.single('file'), (req,res)=>{
+  console.log("Upload hit:", req.file?.originalname);
+  if(!req.file) return res.status(400).json({message:"No file"});
+  res.json({message:"Upload success", file: req.file.originalname});
+});
+
+app.post('/api/files/upload', auth, upload.single('file'), (req,res)=>{
+  if(!req.file) return res.status(400).json({message:"No file"});
+  res.json({message:"Upload success", file: req.file.originalname});
+});
+
+app.get('/', (req,res)=> res.send("TrustVault Backend LIVE - 404 FIXED"));
+app.get('/api/test', (req,res)=> res.json({status:"ok"}));
+
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, ()=> console.log("Server "+PORT));
