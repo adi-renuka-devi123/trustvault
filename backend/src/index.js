@@ -7,7 +7,7 @@ const app = express();
 
 // middleware
 app.use(cors({
-  origin: "*",
+  origin: process.env.FRONTEND_URL || "*",
   credentials: true
 }));
 app.use(express.json());
@@ -20,16 +20,18 @@ app.get('/', (req, res) => {
 // DB connect
 mongoose.connect(process.env.MONGO_URI || process.env.MONGODB_URI)
   .then(() => console.log('MongoDB connected'))
-  .catch(err => console.log('MongoDB error:', err));
+  .catch(err => console.log('MongoDB error:', err.message));
 
-// Routes - IMPORTANT!
+// Routes - IMPORTANT FIX
 try {
-  const authRoutes = require('./routes/auth');
+  let authRoutes = require('./routes/auth');
+  // Fix for Module vs Router issue
+  if (authRoutes.default) authRoutes = authRoutes.default;
   app.use('/api/auth', authRoutes);
   console.log('Auth routes loaded');
 } catch (e) {
   console.log('Auth route error:', e.message);
-  // fallback routes if file not found
+  // fallback routes
   app.post('/api/auth/register', (req, res) => {
     res.status(200).json({ message: 'Register route working - add DB logic' });
   });
